@@ -36,3 +36,7 @@ Route.group(() => {
       ]
     ))
 }).middleware(['auth'])
+
+Route.group(() => {
+  Route.get('share/:id', 'ShareEventController.create')
+}).middleware(['auth'])
