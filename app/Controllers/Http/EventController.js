@@ -59,24 +59,18 @@ class EventController {
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async show ({ params, request }) {
+  async show ({ params, response, auth }) {
     const event = await Event.findOrFail(params.id)
+
+    if (auth.user.id !== event.user_id) {
+      return response
+        .status(401)
+        .send({ error: { message: 'Erro! Voce nao tem permissao para ver este evento!' } })
+    }
 
     await event.load('user')
 
     return event
-  }
-
-  /**
-   * Render a form to update an existing event.
-   * GET events/:id/edit
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async edit ({ params, request, response, view }) {
   }
 
   /**
@@ -87,7 +81,25 @@ class EventController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async update ({ params, request, response }) {
+  async update ({ params, request, response, auth }) {
+    const event = await Event.findOrFail(params.id)
+    const data = request.only(['title', 'location', 'date'])
+
+    if (auth.user.id !== event.user_id) {
+      return response
+        .status(401)
+        .send({ error: { message: 'Erro! Voce nao tem permissao para editar este evento!' } })
+    } else if (moment(event.date).isBefore(Date.now())) {
+      return response
+        .status(401)
+        .send({ error: { message: 'Erro! Voce nao pode editar um evento que já passou!' } })
+    }
+
+    event.merge(data)
+
+    await event.save()
+
+    return event
   }
 
   /**
@@ -98,7 +110,20 @@ class EventController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, auth, response }) {
+    const event = await Event.findOrFail(params.id)
+
+    if (auth.user.id !== event.user_id) {
+      return response
+        .status(401)
+        .send({ error: { message: 'Erro! Voce nao tem permissao para remover este evento!' } })
+    } else if (moment(event.date).isBefore(Date.now())) {
+      return response
+        .status(401)
+        .send({ error: { message: 'Erro! Voce nao pode remover um evento que já passou!' } })
+    } else {
+      event.delete()
+    }
   }
 }
 
