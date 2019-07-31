@@ -2,9 +2,8 @@
 
 const Event = use('App/Models/Event')
 const User = use('App/Models/User')
-const Mail = use('Mail')
-const moment = require('moment')
-
+const Kue = use('Kue')
+const Job = use('App/Jobs/ShareEvent')
 class ShareEventController {
   async create ({ request, response, params, auth }) {
     try {
@@ -13,20 +12,7 @@ class ShareEventController {
       const { to } = request.get()
 
       if (to) {
-        await Mail.send(
-          ['emails.share_event'],
-          {
-            title: event.title,
-            location: event.location,
-            date: event.date.toLocaleString('pt-BR')
-          },
-          message => {
-            message
-              .to(to)
-              .from(user.email, user.username)
-              .subject(`${user.username} compartilhou um evento com você!`)
-          }
-        )
+        Kue.dispatch(Job.key, { email: to, username: user.username, event })
       } else {
         return response
           .status(401)
